@@ -1,0 +1,36 @@
+name: packer
+
+on:
+  pull_request:
+    types: [ labeled ]  
+  push:
+    branches: [ "master" ]    
+
+env:
+  PRODUCT_VERSION: "1.8.6"
+
+jobs:
+  packer:
+    if: ${{ github.event.label.name == 'image-build' }}
+    runs-on: ubuntu-latest
+    name: Run Packer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup `packer`
+        uses: hashicorp/setup-packer@main
+        id: setup
+        with:
+          version: ${{ env.PRODUCT_VERSION }}
+
+      - name: Run `packer init`
+        id: init
+        run: "packer init ./packer/winserver2022dcg2.pkr.hcl"
+
+      - name: Run `packer validate`
+        id: validate
+        run: "packer validate ./packer/winserver2022dcg2.pkr.hcl"
+
+      - name: Build image
+        run: packer build -var-file=./packer/variables.pkr.hcl -color=false -on-error=abort ./packer/winserver2022dcg2.pkr.hcl
