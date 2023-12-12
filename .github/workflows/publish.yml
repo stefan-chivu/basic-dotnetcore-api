@@ -53,3 +53,25 @@ jobs:
           files: "BasicApi-*"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run `packer init`
+        if: ${{ matrix.os == 'windows-latest' }}
+        shell: bash
+        id: init
+        run: "packer init ./packer/winserver2022dcg2.pkr.hcl"
+
+      - name: Run `packer validate`
+        if: ${{ matrix.os == 'windows-latest' }}
+        shell: bash
+        id: validate
+        run: |
+          tag=$(git describe --tags --abbrev=0)
+          release_name="BasicApi-$tag-${{ matrix.target }}"
+          packer validate -var "appFileZip=${release_name}.zip" ./packer/winserver2022dcg2.pkr.hcl
+
+      - name: Build image
+        if: ${{ matrix.os == 'windows-latest' }}
+        shell: bash
+        run: |
+          tag=$(git describe --tags --abbrev=0)
+          release_name="BasicApi-$tag-${{ matrix.target }}"
+          packer build -var "appFileZip=${release_name}.zip" -color=false -on-error=abort ./packer/winserver2022dcg2.pkr.hcl
