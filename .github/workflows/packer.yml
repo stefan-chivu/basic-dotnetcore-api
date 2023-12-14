@@ -1,29 +1,31 @@
-name: Publish
+name: packer
+
 on:
-  release:
-    types: [published]
+  pull_request:
+    branches: [ "master" ]
+    types: [ labeled ]  
+  push:
+    branches: [ "master" ]    
+
+env:
+  PRODUCT_VERSION: "1.8.6"
+
 jobs:
-  release:
-    name: Release
+  packer:
+    if: ${{ github.event.label.name == 'image-build' }}
+    name: Run Packer
     strategy:
       matrix:
         dotnet-version: [ '8.0.x' ]
-        kind: ['linux', 'windows', 'macOS']
+        kind: ['windows']
         include:
-          - kind: linux
-            os: ubuntu-latest
-            target: linux-x64
           - kind: windows
             os: windows-latest
             target: win-x64
-          - kind: macOS
-            os: macos-latest
-            target: osx-x64
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
-
+        uses: actions/checkout@v3
       - name: Setup dotnet
         uses: actions/setup-dotnet@v1
         with:
@@ -47,12 +49,12 @@ jobs:
 
           # Delete output directory
           rm -r "$release_name"
-      - name: Publish
-        uses: softprops/action-gh-release@v1
+      - name: Setup `packer`
+        uses: hashicorp/setup-packer@main
+        id: setup
         with:
-          files: "BasicApi-*"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          version: ${{ env.PRODUCT_VERSION }}
+
       - name: Run `packer init`
         id: init
         run: "packer init ./packer/winserver2022dcg2.pkr.hcl"
